@@ -5,6 +5,10 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_VERSION = "10"
+  # Public browser configuration only. Server secrets stay in Netlify environment variables.
+  NEXT_PUBLIC_SUPABASE_URL = "https://ffjvzacpcnmjzkyfbrlv.supabase.co"
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_5YGZl-Av2Nutqgik8P2xgA_waclTari"
+  NEXT_PUBLIC_SITE_URL = "https://originstudioscr.netlify.app"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

@@ -12,6 +12,7 @@ export type ProductVariant = {
 };
 
 export type Product = {
+  availabilityUnknown?: boolean;
   id: string;
   slug: string;
   name: string;
@@ -26,6 +27,7 @@ export type Product = {
 };
 
 export type CartLine = {
+  stock?: number;
   productId: string;
   variantId: string;
   slug: string;

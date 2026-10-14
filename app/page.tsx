@@ -3,9 +3,9 @@ import { getProducts } from "@/lib/products";
 import { OriginLogo } from "@/components/OriginLogo";
 import { VipAccess } from "@/components/VipAccess";
 import type { Product } from "@/lib/types";
-import { inventorySummary } from "@/lib/inventory";
+import Image from "next/image";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const brandMenu = [
   {
@@ -59,11 +59,11 @@ export default async function HomePage() {
             <p className="mt-6 max-w-md text-lg text-ink/75">Enviamos a todo el pais y Entregas Personales con costo adicional.</p>
             <div className="mt-6 grid max-w-md grid-cols-2 gap-3">
               <div className="border border-wine/20 bg-warmwhite p-4">
-                <p className="font-editorial text-4xl text-deepwine">{inventorySummary.models}</p>
+                <p className="font-editorial text-4xl text-deepwine">{products.length}</p>
                 <p className="text-xs uppercase text-wine">modelos cargados</p>
               </div>
               <div className="border border-wine/20 bg-warmwhite p-4">
-                <p className="font-editorial text-4xl text-deepwine">{inventorySummary.units}</p>
+                <p className="font-editorial text-4xl text-deepwine">{products.some(p => p.availabilityUnknown) ? "—" : products.reduce((sum, p) => sum + p.variants.reduce((s, v) => s + v.stock, 0), 0)}</p>
                 <p className="text-xs uppercase text-wine">prendas en stock</p>
               </div>
             </div>
@@ -77,10 +77,10 @@ export default async function HomePage() {
             <div className="flex h-full items-center justify-center border border-cream/45 bg-cream text-center">
               <div>
                 <div className="mx-auto mb-6 flex justify-center">
-                  <img src="/logo-origin.jpeg" alt="Origin Studios" className="h-36 w-36 rounded-full object-cover ring-2 ring-wine/25 md:h-48 md:w-48" />
+                  <Image src="/logo-origin.jpeg" alt="Origin Studios" width={384} height={384} sizes="(max-width: 768px) 144px, 192px" priority className="h-36 w-36 rounded-full object-cover ring-2 ring-wine/25 md:h-48 md:w-48" />
                 </div>
                 <p className="font-editorial text-5xl text-deepwine">Drop editorial</p>
-                <p className="mt-3 max-w-xs text-sm text-warmgray">Aqui va la fotografia principal del drop cuando la subas desde el panel.</p>
+                <p className="mt-3 max-w-xs text-sm text-warmgray">Prendas seleccionadas para expresar tu estilo. Encuentra tu próxima favorita.</p>
               </div>
             </div>
           </div>
@@ -101,7 +101,7 @@ export default async function HomePage() {
       <section id="drops" className="mx-auto max-w-7xl px-4 pb-16 md:px-8">
         <div className="grid gap-4 md:grid-cols-3">
           <Feature title="Reserva temporal" text="Cuando generas una orden, las piezas quedan reservadas mientras verificas el pago." />
-          <Feature title="Compra por SINPE" text="Orden clara, monto exacto y resumen listo para copiar o enviar por WhatsApp." />
+          <Feature title="Paga a tu manera" text="SINPE, transferencia BAC, efectivo o pago contra entrega. Coordinamos los detalles contigo." />
           <Feature title="Track your order" text="Consulta tu pedido con numero de orden y telefono, sin depender del DM." />
         </div>
       </section>

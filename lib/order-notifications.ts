@@ -1,4 +1,5 @@
 import { crc } from "@/lib/currency";
+import { paymentInstructions, paymentLabels, type PaymentMethod } from "@/lib/checkout";
 
 type OrderRecord = {
   order_number: string;
@@ -46,6 +47,10 @@ function itemSummary(items: OrderItemRecord[]) {
 }
 
 function emailHtml(order: OrderRecord, items: OrderItemRecord[]) {
+  const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  // Values interpolated into HTML are escaped, including customer-supplied fields.
+  order = { ...order, customer_name: escape(order.customer_name), province: escape(order.province), canton: escape(order.canton), district: escape(order.district), address: escape(order.address) };
+  items = items.map(item => ({ ...item, product_name: escape(item.product_name), brand_name: escape(item.brand_name), size: escape(item.size) }));
   const rows = items.map((item) => `
     <tr>
       <td style="padding:12px;border-bottom:1px solid #eadfd3;">${item.quantity}x ${item.brand_name} ${item.product_name}</td>
@@ -72,7 +77,9 @@ function emailHtml(order: OrderRecord, items: OrderItemRecord[]) {
           <tbody>${rows}</tbody>
         </table>
         <p style="font-size:18px;margin-top:20px;">Total: <strong>${crc(order.total_crc)}</strong></p>
-        <p>Para finalizar, realiza el pago por SINPE Móvil al <strong>8603-7873</strong> e incluye tu número de orden en el detalle.</p>
+        <p>Método de pago: <strong>${paymentLabels[order.payment_method as PaymentMethod] || order.payment_method}</strong></p>
+        <p>${paymentInstructions(order.payment_method)}</p>
+        <p>El costo de envío o entrega personal está pendiente de cotización y se confirmará contigo.</p>
         <p style="color:#6b625c;">Entrega: ${order.province}, ${order.canton}, ${order.district}. ${order.address}</p>
       </div>
     </div>
@@ -87,6 +94,7 @@ async function sendCustomerEmail(order: OrderRecord, items: OrderItemRecord[]): 
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(5000),
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json"
@@ -115,12 +123,14 @@ async function sendOwnerWhatsapp(order: OrderRecord, items: OrderItemRecord[]): 
     `Cliente: ${order.customer_name}`,
     `Tel: ${order.phone}`,
     `Total: ${crc(order.total_crc)}`,
+    `Pago: ${paymentLabels[order.payment_method as PaymentMethod] || order.payment_method}`,
     "Prendas:",
     itemSummary(items)
   ].join("\n");
 
   const response = await fetch(`https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`, {
     method: "POST",
+    signal: AbortSignal.timeout(5000),
     headers: {
       authorization: `Bearer ${accessToken}`,
       "content-type": "application/json"

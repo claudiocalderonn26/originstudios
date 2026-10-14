@@ -23,6 +23,7 @@ export function TrackingForm() {
     setMessage("");
     setResult(null);
     const form = new FormData(event.currentTarget);
+    try {
     const response = await fetch("/api/tracking", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -38,6 +39,9 @@ export function TrackingForm() {
       return;
     }
     setResult(data.order);
+    } catch {
+      setMessage("No pudimos conectar. Intenta nuevamente en un momento.");
+    } finally { setLoading(false); }
   }
 
   return (

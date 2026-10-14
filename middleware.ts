@@ -3,11 +3,10 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/utils/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = createClient(request);
-  await supabase.auth.getUser();
-
+  const session = createClient(request);
+  const { supabase } = session;
   const protectedPath = request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/api/admin");
-  if (!protectedPath) return response;
+  if (!protectedPath) return session.response;
 
   const { data: { user } } = await supabase.auth.getUser();
   const adminEmail = process.env.ADMIN_EMAIL || "claudiocalderonn26@gmail.com";
@@ -22,7 +21,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return response;
+  return session.response;
 }
 
 export const config = {

@@ -11,10 +11,10 @@ export function browserSupabase() {
 export function adminSupabase() {
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !service) throw new Error("Missing server Supabase environment variables.");
-  return createClient(url, service, { auth: { persistSession: false } });
+  return createClient(url, service, { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
 }
 
 export function publicSupabase() {
   if (!url || !publishable) throw new Error("Missing public Supabase environment variables.");
-  return createClient(url, publishable, { auth: { persistSession: false } });
+  return createClient(url, publishable, { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
 }

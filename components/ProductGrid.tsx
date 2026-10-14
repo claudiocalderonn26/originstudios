@@ -1,7 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Product } from "@/lib/types";
 import { crc } from "@/lib/currency";
-import { inventoryPrices } from "@/lib/inventory";
 
 export function ProductGrid({ products }: { products: Product[] }) {
   if (!products.length) {
@@ -17,27 +17,31 @@ export function ProductGrid({ products }: { products: Product[] }) {
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-7">
       {products.map((product) => {
         const soldOut = product.variants.every((variant) => variant.stock <= 0);
-        const price = product.price_crc > 0 ? product.price_crc : inventoryPrices[product.slug];
+        const price = product.price_crc;
         const coverImage = product.images.length >= 3 ? product.images[2] : product.images[0];
-        const catalogImage = coverImage?.url ? coverImage.url.replace("/product-images/", "/product-images/thumbs/") : "";
+        const catalogImage = coverImage?.url || "";
         return (
-          <Link href={`/products/${product.slug}`} key={product.id} className="group reveal">
+          <Link href={`/products/${product.slug}`} prefetch={false} key={product.id} className="group reveal">
             <div className="relative aspect-[4/5] overflow-hidden bg-warmwhite">
               {catalogImage ? (
-                <img
+                <Image
                   src={catalogImage}
                   alt={coverImage?.alt || product.name}
+                  fill
+                  sizes="(max-width: 767px) 46vw, (max-width: 1280px) 23vw, 280px"
+                  quality={80}
+                  unoptimized={!catalogImage.startsWith("/") && !/^https:\/\/([^/]+\.supabase\.co|cdn\.shopify\.com)\//.test(catalogImage)}
                   loading="lazy"
                   decoding="async"
                   className="h-full w-full bg-[#f8f8f7] object-contain p-2 transition duration-300 group-hover:scale-[1.02]"
                 />
               ) : <ProductPlaceholder brand={product.brand?.name || "Origin"} name={product.name} />}
-              {soldOut ? <span className="absolute left-3 top-3 bg-ink px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-cream">Sold out</span> : null}
+              {soldOut ? <span className="absolute left-3 top-3 bg-ink px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-cream">{product.availabilityUnknown ? "Consultar disponibilidad" : "Agotado"}</span> : null}
             </div>
             <div className="mt-3">
               <p className="text-[11px] uppercase tracking-[0.22em] text-warmgray">{product.brand?.name}</p>
               <h3 className="mt-1 text-sm font-semibold">{product.name}</h3>
-              <p className="mt-1 text-sm font-semibold text-wine">{price ? crc(price) : ""}</p>
+              <p className="mt-1 text-sm font-semibold text-wine">{price ? crc(price) : "Precio por confirmar"}</p>
             </div>
           </Link>
         );

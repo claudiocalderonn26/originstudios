@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CartLine } from "@/lib/types";
 import { crc } from "@/lib/currency";
+import { readCart, saveCart } from "@/lib/cart";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [lines, setLines] = useState<CartLine[]>([]);
 
   useEffect(() => {
-    const sync = () => setLines(JSON.parse(localStorage.getItem("origin-cart") || "[]"));
+    const sync = () => setLines(readCart());
     sync();
     window.addEventListener("origin-cart-updated", sync);
     return () => window.removeEventListener("origin-cart-updated", sync);
@@ -18,13 +19,12 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
 
   function save(next: CartLine[]) {
     setLines(next);
-    localStorage.setItem("origin-cart", JSON.stringify(next));
-    window.dispatchEvent(new Event("origin-cart-updated"));
+    saveCart(next);
   }
 
   return (
     <div className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
-      <button className={`absolute inset-0 bg-ink/30 transition ${open ? "opacity-100" : "opacity-0"}`} onClick={onClose} />
+      <button aria-label="Cerrar carrito" className={`absolute inset-0 bg-ink/30 transition ${open ? "opacity-100" : "opacity-0"}`} onClick={onClose} />
       <aside className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-warmwhite p-6 shadow-2xl transition duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex items-center justify-between border-b border-ink/10 pb-4">
           <h2 className="font-editorial text-3xl">Carrito</h2>
@@ -45,7 +45,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <div className="mt-2 flex items-center gap-2">
                       <button onClick={() => save(lines.map((x) => x.variantId === line.variantId ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))}>-</button>
                       <span>{line.quantity}</span>
-                      <button onClick={() => save(lines.map((x) => x.variantId === line.variantId ? { ...x, quantity: x.quantity + 1 } : x))}>+</button>
+                      <button aria-label={`Aumentar cantidad de ${line.name}`} disabled={line.quantity >= (line.stock ?? 99)} onClick={() => save(lines.map((x) => x.variantId === line.variantId ? { ...x, quantity: Math.min(x.stock ?? 99, x.quantity + 1) } : x))}>+</button>
                       <button className="ml-auto text-wine" onClick={() => save(lines.filter((x) => x.variantId !== line.variantId))}>Eliminar</button>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminSupabase } from "@/lib/supabase";
+import { revalidateTag } from "next/cache";
 
 const variantSchema = z.object({
   size: z.string().min(1),
@@ -92,6 +93,7 @@ export async function POST(request: Request) {
     })));
   }
 
+  revalidateTag("products");
   return NextResponse.json({ ok: true, productId: product.id });
 }
 
@@ -131,21 +133,34 @@ export async function PATCH(request: Request) {
     .eq("id", payload.id);
   if (productError) return NextResponse.json({ error: productError.message }, { status: 400 });
 
-  await supabase.from("product_images").delete().eq("product_id", payload.id);
+  // Editing a name or size must not erase the product's remaining gallery.
   if (payload.image_url) {
-    await supabase.from("product_images").insert({ product_id: payload.id, url: payload.image_url, alt: payload.name, position: 0 });
+    const { data: firstImage } = await supabase.from("product_images").select("id").eq("product_id", payload.id).order("position").limit(1).maybeSingle();
+    const imageData = { product_id: payload.id, url: payload.image_url, alt: payload.name, position: 0 };
+    const result = firstImage
+      ? await supabase.from("product_images").update(imageData).eq("id", firstImage.id)
+      : await supabase.from("product_images").insert(imageData);
+    if (result.error) return NextResponse.json({ error: result.error.message }, { status: 400 });
   }
 
-  await supabase.from("product_variants").delete().eq("product_id", payload.id);
+  // Preserve variant IDs used by carts and previous orders.
+  const { data: existingVariants, error: readError } = await supabase.from("product_variants").select("id,size").eq("product_id", payload.id);
+  if (readError) return NextResponse.json({ error: readError.message }, { status: 400 });
+  const removed = (existingVariants || []).filter(v => !payload.variants.some(next => next.size.toUpperCase() === v.size)).map(v => v.id);
+  if (removed.length) {
+    const { error } = await supabase.from("product_variants").update({ stock: 0 }).in("id", removed);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  }
   if (payload.variants.length) {
-    const { error: variantsError } = await supabase.from("product_variants").insert(payload.variants.map((variant) => ({
+    const { error: variantsError } = await supabase.from("product_variants").upsert(payload.variants.map((variant) => ({
       product_id: payload.id,
       size: variant.size.toUpperCase(),
       stock: variant.stock
-    })));
+    })), { onConflict: "product_id,size" });
     if (variantsError) return NextResponse.json({ error: variantsError.message }, { status: 400 });
   }
 
+  revalidateTag("products");
   return NextResponse.json({ ok: true });
 }
 
@@ -155,8 +170,9 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: "Falta el producto." }, { status: 400 });
 
   const supabase = adminSupabase();
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase.from("products").update({ is_active: false, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  revalidateTag("products");
   return NextResponse.json({ ok: true });
 }

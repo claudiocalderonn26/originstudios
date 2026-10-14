@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CartLine } from "@/lib/types";
 import { CartDrawer } from "@/components/CartDrawer";
 import { OriginLogo } from "@/components/OriginLogo";
+import { readCart } from "@/lib/cart";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -11,7 +11,7 @@ export function Header() {
 
   useEffect(() => {
     const sync = () => {
-      const cart = JSON.parse(localStorage.getItem("origin-cart") || "[]") as CartLine[];
+      const cart = readCart();
       setCount(cart.reduce((sum, line) => sum + line.quantity, 0));
     };
     sync();
@@ -42,7 +42,7 @@ export function Header() {
           </button>
         </div>
       </header>
-      <CartDrawer open={open} onClose={() => setOpen(false)} />
+      {open && <CartDrawer open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }
